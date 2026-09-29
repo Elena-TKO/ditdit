@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      args:
+        WITH_ML: "1"          
+        PRELOAD_MODEL: "1"
+    environment:
+      DETECTOR: ${DETECTOR:-ultralytics}
+      MODEL_WEIGHTS: ${MODEL_WEIGHTS:-yolov8s-worldv2.pt}
+      SECRET_KEY: ${SECRET_KEY:-}   
+      DATA_DIR: /data
+    volumes:
+      - stroy-data:/data
+      - ./models:/app/models     
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 30
+      start_period: 60s
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  stroy-data:
